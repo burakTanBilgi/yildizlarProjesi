@@ -8,6 +8,7 @@ let date = new Date(); // Current date/time
 let showConstellations = true;
 let showConstellationLabels = false;
 let showStarNames = false;
+let hoveredConstellationId = null; // Track hovered constellation
 
 // Visualization Scale
 let scaleFactor = 400;
@@ -28,22 +29,18 @@ function parseConstellations(data) {
     constellations = data.features;
     for (let c of constellations) {
       if (c.geometry && c.geometry.coordinates) {
-        c.centroid = calculateCentroid(c.geometry.coordinates);
+        // Ensure ID is clean
+        if (!c.id) c.id = "Unknown";
+        
+        // Phase 99: Metadata Placeholders (Future expansion)
+        c.meta = {
+          description: "",
+          origin: "",
+          mythology: "" 
+        };
       }
     }
   }
-}
-
-function calculateCentroid(coords) {
-  let sumRa = 0, sumDec = 0, count = 0;
-  for (let line of coords) {
-    for (let point of line) {
-      sumRa += point[0];
-      sumDec += point[1];
-      count++;
-    }
-  }
-  return count > 0 ? { ra: sumRa/count, dec: sumDec/count } : null;
 }
 
 function loadError(err) {
@@ -168,20 +165,23 @@ function draw() {
   
   // Calculate Local Sidereal Time
   let lst = calculateLST(date, observerLon);
-  
-  // Draw Constellation Lines
-  stroke(255, 30); // Faint white
-  noFill();
-  strokeWeight(1);
+
+  // --- 1. Process Constellations (Project & Calculate Bounds) ---
+  let visibleConsts = [];
+  hoveredConstellationId = null;
+  let minDist = 150; // Threshold for hover detection
 
   if (constellations) {
     for (let constell of constellations) {
-      // Each feature has a geometry with type MultiLineString
+      // Prepare storage for projected paths
+      let screenPaths = [];
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      let hasVisiblePoints = false;
+
       let coords = constell.geometry.coordinates;
       
       for (let lineSegments of coords) {
-        beginShape();
-        let penDown = false;
+        let currentPath = [];
         
         for (let point of lineSegments) {
           let ra = point[0];
@@ -189,105 +189,155 @@ function draw() {
           
           // Project Point
           let ha = lst - ra;
-          // Normalize HA
           while (ha < -180) ha += 360;
           while (ha > 180) ha -= 360;
 
           let pos = equatorialToHorizontal(ha, dec, observerLat);
           
           if (pos.alt > 0) {
-            let projected = projectStereographic(pos.az, pos.alt);
-            
-            // Check for horizon crossing or large jumps (wrapping)
-            // If the jump is too large, break the shape
-            if (penDown) {
-               // We can't easily check previous vertex distance in beginShape without tracking
-               // But usually simple projection is fine.
-               // Let's just add vertex.
-               vertex(projected.x, projected.y);
-            } else {
-               vertex(projected.x, projected.y);
-               penDown = true;
-            }
+             let proj = projectStereographic(pos.az, pos.alt);
+             currentPath.push(proj);
+             
+             // Update Bounds
+             if (proj.x < minX) minX = proj.x;
+             if (proj.x > maxX) maxX = proj.x;
+             if (proj.y < minY) minY = proj.y;
+             if (proj.y > maxY) maxY = proj.y;
+             
+             hasVisiblePoints = true;
           } else {
-            // Below horizon, end current shape and start new one if it comes back up (unlikely for a single connected line segment usually)
-            endShape();
-            beginShape();
-            penDown = false;
+             // Break lines at horizon
+             if (currentPath.length > 0) {
+               screenPaths.push(currentPath);
+               currentPath = [];
+             }
           }
         }
-        endShape();
+        if (currentPath.length > 0) screenPaths.push(currentPath);
       }
-      
-      // Draw Label
-      if (showConstellationLabels && constell.centroid) {
-         let ha = lst - constell.centroid.ra;
-         while (ha < -180) ha += 360;
-         while (ha > 180) ha -= 360;
-         
-         let pos = equatorialToHorizontal(ha, constell.centroid.dec, observerLat);
-         
-         if (pos.alt > 0) {
-            let proj = projectStereographic(pos.az, pos.alt);
-            fill(100, 255, 218, 180); 
-            noStroke();
-            textAlign(CENTER, CENTER);
-            textSize(10);
-            text(constell.id, proj.x, proj.y);
-         }
+
+      if (hasVisiblePoints) {
+        let centerX = (minX + maxX) / 2;
+        let centerY = (minY + maxY) / 2;
+        
+        // Calculate dist for hover
+        let d = dist(mouseX, mouseY, centerX, centerY);
+        let isActive = false;
+        
+        // Simple closest-check logic
+        // We defer assignment until we check all, but for simplicity:
+        // We'll collect candidates and pick closest later if needed.
+        // For now, let's just store the data.
+        
+        visibleConsts.push({
+          id: constell.id,
+          paths: screenPaths,
+          center: createVector(centerX, centerY),
+          dist: d
+        });
       }
     }
   }
 
-  noStroke();
-  let visibleCount = 0;
+  // Find the single closest constellation for hover
+  let closest = null;
+  let closestVal = minDist;
+  for (let c of visibleConsts) {
+    if (c.dist < closestVal) {
+      closestVal = c.dist;
+      closest = c;
+    }
+  }
+  if (closest) hoveredConstellationId = closest.id;
+
+  // --- 2. Draw Constellations ---
+  strokeWeight(1);
   
-  let closestDist = 15; // Hover threshold in pixels
+  for (let c of visibleConsts) {
+     let isHovered = (c.id === hoveredConstellationId);
+     let isVisible = showConstellations || isHovered;
+     
+     if (!isVisible) continue;
+     
+     // Visuals
+     if (isHovered) {
+       stroke(100, 255, 218, 200); // Brighter Cyan
+       strokeWeight(1.5);
+     } else {
+       stroke(255, 15); // Extremely faint
+       strokeWeight(1);
+     }
+     noFill();
+     
+     // Draw Lines
+     for (let path of c.paths) {
+       beginShape();
+       for (let p of path) {
+         vertex(p.x, p.y);
+       }
+       endShape();
+     }
+     
+     // Draw Label
+     if (showConstellationLabels || isHovered) {
+        let fullName = (typeof constellationNames !== 'undefined' && constellationNames[c.id]) 
+                       ? constellationNames[c.id] 
+                       : c.id;
+
+        noStroke();
+        if (isHovered) {
+          fill(255);
+          textSize(14); // Larger
+        } else {
+          fill(255, 150);
+          textSize(10);
+        }
+        textAlign(CENTER, CENTER);
+        text(fullName, c.center.x, c.center.y);
+     }
+  }
+
+  // --- 3. Draw Stars ---
+  noStroke();
+  let closestDist = 15;
   let hoveredStar = null;
   let hoveredPos = null;
   
   for (let star of stars) {
-    // 1. Calculate Hour Angle (HA)
-    // HA = LST - RA
-    let ha = lst - star.ra; // in degrees
-    
-    // Normalize HA to -180 to 180
+    let ha = lst - star.ra;
     while (ha < -180) ha += 360;
     while (ha > 180) ha -= 360;
     
-    // 2. Convert Equatorial (HA, Dec) to Horizontal (Alt, Az)
     let pos = equatorialToHorizontal(ha, star.dec, observerLat);
     
-    // 3. Project to Canvas (Stereographic from Zenith)
-    // Only draw if above horizon (Alt > 0)
     if (pos.alt > 0) {
       let projected = projectStereographic(pos.az, pos.alt);
       
-      // Calculate size based on magnitude
-      // Mag range roughly -1.5 to 6.5
+      // Render Star
       let size = map(star.mag, 6, -1.5, 0.5, 4, true);
-      
-      // Color adjustment based on B-V
       let starColor = bvToColor(star.bv);
       starColor.setAlpha(200);
       fill(starColor);
-      
       circle(projected.x, projected.y, size);
-      visibleCount++;
 
-      // Show Star Names if toggled
-      if (showStarNames && star.mag < 3.0) { // Only show names for brighter stars to avoid clutter
-        fill(255, 150);
-        noStroke();
+      // --- Smart Filtering (Refined) ---
+      // 1. Global Rule: Show if Toggle ON AND Mag < 2.0 (Very Bright)
+      let showGlobal = showStarNames && star.mag < 2.0;
+      
+      // 2. Hover Rule: Show if Star is in Hovered Constellation AND Mag < 5.0 (Detail)
+      // Check ID only if it exists
+      let isHoveredConst = (hoveredConstellationId && star.constellationId === hoveredConstellationId);
+      let showHover = isHoveredConst && star.mag < 5.0;
+      
+      if (showGlobal || showHover) {
+        fill(255, 180);
         textAlign(CENTER, BOTTOM);
-        textSize(8);
+        textSize(9);
         let label = star.name || "";
-        if (label) {
-           text(label, projected.x, projected.y - 5);
-        }
+        if (label) text(label, projected.x, projected.y - 5);
       }
 
-      // Interaction Check
+      // Star Hover Check
       let d = dist(mouseX, mouseY, projected.x, projected.y);
       if (d < closestDist) {
         closestDist = d;
@@ -312,12 +362,13 @@ function draw() {
     circle(hoveredPos.x, hoveredPos.y, 15);
   }
   
-  // Debug Info
+  /* Debug Info - Disabled for Phase 2 Minimalist View
   fill(150);
   textAlign(LEFT, TOP);
   text(`Stars: ${visibleCount} / ${stars.length}`, 10, 10);
   text(`Date: ${date.toISOString()}`, 10, 30);
   text(`LST: ${lst.toFixed(2)}°`, 10, 50);
+  */
 }
 
 // --- Data Parsing ---
@@ -341,12 +392,28 @@ function parseStars(data) {
 
     // Only add visible stars
     if (mag <= 6.5) {
+      // Determine Constellation ID from Name (Simple heuristic)
+      let name = item.Name || item.HR || "";
+      let constellationId = null;
+      
+      if (typeof constellationNames !== 'undefined') {
+        for (let key in constellationNames) {
+           // Regex: Match 3-letter code as a distinct word (e.g. "Alp And", "86 Peg")
+           let regex = new RegExp("\\b" + key + "\\b", "i");
+           if (regex.test(name)) {
+             constellationId = key;
+             break;
+           }
+        }
+      }
+
       stars.push({
         ra: ra,
         dec: dec,
         mag: mag,
         bv: bv,
-        name: item.Name || item.HR // Use Name or Harvard Revised number
+        name: name,
+        constellationId: constellationId
       });
     }
   }

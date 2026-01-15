@@ -6,7 +6,6 @@ A beautiful, interactive star map visualization built with p5.js. This applicati
 
 - **Real-time Sky Rendering**: Calculates accurate star positions (Altitude/Azimuth) based on your Location and Time.
 - **Interactive Visualization**:
-  - Pan/Zoom (Future).
   - Hover over stars to see names/magnitudes.
   - Toggle Constellation Lines and Names.
   - Toggle Star Names.
