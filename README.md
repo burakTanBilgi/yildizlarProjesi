@@ -22,6 +22,7 @@ Turn your observation into art with the built-in Layout Engine:
 * **Smart Export:** Downloads high-res PNGs with your chosen layout and typography burned in.
 
 ### 🎛 Interactive Controls
+* **Click to Select:** Click on any constellation to instantly load its **Mythology** and Title into the Poster Studio.
 * **Time Travel:** Go back to 10,000 BC or forward to 3000 AD.
 * **Precision Filters:**
     * Toggle **Constellation Lines** (Ghost / Neon modes).

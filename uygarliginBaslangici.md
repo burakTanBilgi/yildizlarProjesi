@@ -124,3 +124,8 @@ This project was made for a friend to honor his deceased pet's memory. His reque
 -> dairenin etrafına eklenilebilir çerçeve
 
 - lokal olarak çalıştırıl olduğunda proje klonlanıp webde next.js ile çalışanı yapılsın!
+
+## Eklenebilirler/Yapılacaklar
+
+- Star trail özelliği
+-> belli bir zaman aralığı girilir

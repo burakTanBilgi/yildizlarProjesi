@@ -1,4 +1,4 @@
-const constellationNames = {
+var constellationNames = {
   "And": "Andromeda",
   "Ant": "Antlia",
   "Aps": "Apus",
