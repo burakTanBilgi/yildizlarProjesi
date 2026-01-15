@@ -53,7 +53,3 @@ Interaction Guidelines:
 2. Provide specific "Prompt Blocks" in English that the user can copy-paste directly into Windsurf.
 3. Keep the tone helpful, encouraging ("Kral" vibe), and technically precise.
 4. Do not move to Phase 99 until Phase 1 is perfect.
-
-## PLAN 2
-
-1) 

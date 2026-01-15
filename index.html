@@ -4,50 +4,305 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Uygarlığın Başlangıcı - Star Map</title>
+    <!-- Import Google Fonts for aesthetic typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
+      :root {
+        --glass-bg: rgba(20, 20, 25, 0.75);
+        --glass-border: rgba(255, 255, 255, 0.1);
+        --accent: #64ffda;
+        --text-main: #e6e6e6;
+        --text-dim: #94a3b8;
+      }
       body {
         margin: 0;
         padding: 0;
         background-color: #050505; /* Deep Void Black */
         overflow: hidden;
-        color: #fff;
-        font-family: sans-serif;
+        color: var(--text-main);
+        font-family: 'Inter', sans-serif;
       }
-      #controls {
+      
+      /* Sidebar Container */
+      #sidebar {
         position: absolute;
         top: 20px;
         left: 20px;
+        bottom: 20px;
+        width: 320px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
         z-index: 100;
-        background: rgba(0, 0, 0, 0.7);
-        padding: 15px;
-        border-radius: 8px;
-        border: 1px solid #333;
+        pointer-events: none; /* Let clicks pass through gaps */
       }
+
+      /* Common Panel Style */
+      .panel {
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        padding: 0;
+        pointer-events: auto;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+      }
+
+      .panel-header {
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.03);
+        border-bottom: 1px solid var(--glass-border);
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        user-select: none;
+      }
+      .panel-header h2 {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .panel-header .toggle-icon {
+        font-size: 1.2rem;
+        color: var(--text-dim);
+        transition: transform 0.3s;
+      }
+
+      .panel-content {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        overflow-y: auto;
+        max-height: 400px; /* Scrollable if long */
+      }
+
+      /* Collapsed State */
+      .panel.collapsed .panel-content {
+        display: none;
+      }
+      .panel.collapsed .panel-header .toggle-icon {
+        transform: rotate(-90deg);
+      }
+      
+      /* Form Elements */
       label {
+        font-size: 0.8rem;
+        color: var(--text-dim);
+        margin-bottom: 4px;
         display: block;
-        margin-bottom: 5px;
-        font-size: 0.9em;
-        color: #aaa;
       }
-      input[type="datetime-local"] {
-        background: #111;
-        border: 1px solid #444;
+      input[type="text"],
+      input[type="number"],
+      input[type="datetime-local"],
+      textarea {
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid var(--glass-border);
         color: #fff;
-        padding: 5px;
-        border-radius: 4px;
+        padding: 8px 12px;
+        border-radius: 8px;
         font-family: inherit;
+        width: 100%;
+        box-sizing: border-box;
+        transition: border-color 0.2s;
       }
+      input:focus, textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+      
+      .row {
+        display: flex;
+        gap: 10px;
+      }
+      .col {
+        flex: 1;
+      }
+
+      /* Toggles */
+      .toggle-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 0;
+      }
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 20px;
+      }
+      .toggle-switch input { opacity: 0; width: 0; height: 0; }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #333;
+        transition: .4s;
+        border-radius: 20px;
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 2px;
+        bottom: 2px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+      }
+      input:checked + .slider { background-color: var(--accent); }
+      input:checked + .slider:before { transform: translateX(20px); }
+
+      /* Buttons */
+      button.action-btn {
+        width: 100%;
+        padding: 10px;
+        margin-top: 10px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--glass-border);
+        color: var(--text-main);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-weight: 500;
+      }
+      button.action-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: var(--text-dim);
+      }
+
+      /* Scrollbar */
+      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
     </style>
-    <!-- Import p5.js via CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <!-- Import p5.js locally -->
+    <script src="p5.min.js"></script>
   </head>
   <body>
-    <div id="controls">
-      <label for="date-picker">Observation Date & Time</label>
-      <input type="datetime-local" id="date-picker">
-      <br><br>
-      <button id="save-btn" style="padding: 8px 15px; background: #333; color: white; border: 1px solid #555; border-radius: 4px; cursor: pointer;">Save Image</button>
+    
+    <div id="sidebar">
+      
+      <!-- Tab 1: Location & Info -->
+      <div class="panel" id="panel-info">
+        <div class="panel-header" onclick="togglePanel('panel-info')">
+          <h2>Location & Time</h2>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="panel-content">
+          <div>
+            <label>Observation Date</label>
+            <input type="datetime-local" id="date-picker">
+          </div>
+          <div class="row">
+            <div class="col">
+              <label>Latitude</label>
+              <input type="number" id="lat-input" value="41.0082" step="0.0001">
+            </div>
+            <div class="col">
+              <label>Longitude</label>
+              <input type="number" id="lon-input" value="28.9784" step="0.0001">
+            </div>
+          </div>
+          <button class="action-btn" id="btn-location" style="margin-top: 5px; font-size: 0.8rem;">📍 Use My Location</button>
+          
+          <div style="font-size: 0.75rem; color: #666; font-style: italic; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+            <div><strong>Projection:</strong> Stereographic</div>
+            <div><strong>Center:</strong> Zenith</div>
+            <div><strong>Data:</strong> Yale Bright Star Catalog</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Options -->
+      <div class="panel" id="panel-options">
+        <div class="panel-header" onclick="togglePanel('panel-options')">
+          <h2>Display Options</h2>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="panel-content">
+          <div class="toggle-row">
+            <span>Show Constellation Lines</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-constellations" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <span>Show Constellation Names</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-const-labels">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <span>Show Star Names</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-names">
+              <span class="slider"></span>
+            </label>
+          </div>
+          
+          <button id="save-btn" class="action-btn">Download Capture</button>
+        </div>
+      </div>
+
+      <!-- Tab 3: Notes -->
+      <div class="panel collapsed" id="panel-notes">
+        <div class="panel-header" onclick="togglePanel('panel-notes')">
+          <h2>Field Notes</h2>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="panel-content">
+          <textarea id="notes-area" rows="6" placeholder="Enter your observation notes here..."></textarea>
+          <button class="action-btn" onclick="saveNotes()">Save Notes</button>
+        </div>
+      </div>
+
     </div>
+
     <script src="sketch.js"></script>
+    <script>
+      function togglePanel(id) {
+        document.getElementById(id).classList.toggle('collapsed');
+      }
+      
+      // Load notes on startup
+      window.onload = function() {
+        let savedNotes = localStorage.getItem('starMapNotes');
+        if (savedNotes) {
+          document.getElementById('notes-area').value = savedNotes;
+        }
+      }
+
+      function saveNotes() {
+        let text = document.getElementById('notes-area').value;
+        localStorage.setItem('starMapNotes', text);
+        
+        // Visual feedback
+        let btn = document.querySelector('#panel-notes .action-btn');
+        let originalText = btn.innerText;
+        btn.innerText = "Saved!";
+        btn.style.background = "rgba(100, 255, 218, 0.2)";
+        
+        setTimeout(() => {
+          btn.innerText = originalText;
+          btn.style.background = "";
+        }, 2000);
+      }
+    </script>
   </body>
 </html>

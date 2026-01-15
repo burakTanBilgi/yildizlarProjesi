@@ -5,6 +5,9 @@ let constellations = [];
 let observerLat = 41.0082; // Istanbul Latitude
 let observerLon = 28.9784; // Istanbul Longitude
 let date = new Date(); // Current date/time
+let showConstellations = true;
+let showConstellationLabels = false;
+let showStarNames = false;
 
 // Visualization Scale
 let scaleFactor = 400;
@@ -23,10 +26,28 @@ function preload() {
 function parseConstellations(data) {
   if (data.features) {
     constellations = data.features;
+    for (let c of constellations) {
+      if (c.geometry && c.geometry.coordinates) {
+        c.centroid = calculateCentroid(c.geometry.coordinates);
+      }
+    }
   }
 }
 
-function loadError() {
+function calculateCentroid(coords) {
+  let sumRa = 0, sumDec = 0, count = 0;
+  for (let line of coords) {
+    for (let point of line) {
+      sumRa += point[0];
+      sumDec += point[1];
+      count++;
+    }
+  }
+  return count > 0 ? { ra: sumRa/count, dec: sumDec/count } : null;
+}
+
+function loadError(err) {
+  console.error("Data Load Error:", err);
   stars = null; // Flag error
 }
 
@@ -34,35 +55,91 @@ function setup() {
   createCanvas(windowWidth, windowHeight);
   centerX = width / 2;
   centerY = height / 2;
-  // loop(); // Default is loop, removing noLoop() to enable interaction
-
-  
-  // Set a specific date for testing if needed
-  // date = new Date('2026-01-01T00:00:00');
   
   // Initialize Date Picker
   let datePicker = select('#date-picker');
-  
-  // Format date for datetime-local input (YYYY-MM-DDThh:mm)
   let now = new Date();
-  // Adjust to local timezone string manually to fit input format
-  // simplistic approach:
   let localIso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-  datePicker.value(localIso);
   
-  // Handle Date Change
-  datePicker.changed(() => {
-    let val = datePicker.value();
-    if (val) {
-      date = new Date(val);
-    }
-  });
+  if (datePicker) {
+    datePicker.value(localIso);
+    datePicker.changed(() => {
+      let val = datePicker.value();
+      if (val) {
+        date = new Date(val);
+        redraw();
+      }
+    });
+  }
+
+  // Handle Location Inputs
+  let latInput = select('#lat-input');
+  let lonInput = select('#lon-input');
+
+  if (latInput) {
+    latInput.input(() => {
+      observerLat = float(latInput.value());
+      redraw();
+    });
+  }
+
+  if (lonInput) {
+    lonInput.input(() => {
+      observerLon = float(lonInput.value());
+      redraw();
+    });
+  }
+
+  // Handle Toggles
+  let toggleConst = select('#toggle-constellations');
+  if (toggleConst) {
+    toggleConst.changed(() => {
+      showConstellations = toggleConst.checked();
+      redraw();
+    });
+  }
+
+  let toggleNames = select('#toggle-names');
+  if (toggleNames) {
+    toggleNames.changed(() => {
+      showStarNames = toggleNames.checked();
+      redraw();
+    });
+  }
+  
+  let toggleConstLabels = select('#toggle-const-labels');
+  if (toggleConstLabels) {
+    toggleConstLabels.changed(() => {
+      showConstellationLabels = toggleConstLabels.checked();
+      redraw();
+    });
+  }
+  
+  // Handle Geolocation
+  let btnLoc = select('#btn-location');
+  if (btnLoc) {
+    btnLoc.mousePressed(() => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((pos) => {
+          observerLat = pos.coords.latitude;
+          observerLon = pos.coords.longitude;
+          if (latInput) latInput.value(observerLat);
+          if (lonInput) lonInput.value(observerLon);
+          redraw();
+        });
+      } else {
+        alert("Geolocation not supported");
+      }
+    });
+  }
 
   // Handle Save Button
   let saveBtn = select('#save-btn');
-  saveBtn.mousePressed(() => {
-    saveCanvas('uygarligin_baslangici_' + date.toISOString().slice(0,10), 'png');
-  });
+  if (saveBtn) {
+    saveBtn.mousePressed(() => {
+      saveCanvas('uygarligin_baslangici_' + date.toISOString().slice(0,10), 'png');
+    });
+  }
 }
 
 function draw() {
@@ -73,6 +150,14 @@ function draw() {
   stroke(30);
   circle(centerX, centerY, scaleFactor * 2);
   
+  if (stars === null) {
+    fill(255, 100, 100);
+    noStroke();
+    textAlign(CENTER);
+    text("Error loading data. Check console.", centerX, centerY);
+    return;
+  }
+
   if (stars.length === 0) {
     fill(255);
     noStroke();
@@ -133,6 +218,24 @@ function draw() {
         }
         endShape();
       }
+      
+      // Draw Label
+      if (showConstellationLabels && constell.centroid) {
+         let ha = lst - constell.centroid.ra;
+         while (ha < -180) ha += 360;
+         while (ha > 180) ha -= 360;
+         
+         let pos = equatorialToHorizontal(ha, constell.centroid.dec, observerLat);
+         
+         if (pos.alt > 0) {
+            let proj = projectStereographic(pos.az, pos.alt);
+            fill(100, 255, 218, 180); 
+            noStroke();
+            textAlign(CENTER, CENTER);
+            textSize(10);
+            text(constell.id, proj.x, proj.y);
+         }
+      }
     }
   }
 
@@ -171,6 +274,18 @@ function draw() {
       
       circle(projected.x, projected.y, size);
       visibleCount++;
+
+      // Show Star Names if toggled
+      if (showStarNames && star.mag < 3.0) { // Only show names for brighter stars to avoid clutter
+        fill(255, 150);
+        noStroke();
+        textAlign(CENTER, BOTTOM);
+        textSize(8);
+        let label = star.name || "";
+        if (label) {
+           text(label, projected.x, projected.y - 5);
+        }
+      }
 
       // Interaction Check
       let d = dist(mouseX, mouseY, projected.x, projected.y);
