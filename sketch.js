@@ -57,6 +57,12 @@ function setup() {
       date = new Date(val);
     }
   });
+
+  // Handle Save Button
+  let saveBtn = select('#save-btn');
+  saveBtn.mousePressed(() => {
+    saveCanvas('uygarligin_baslangici_' + date.toISOString().slice(0,10), 'png');
+  });
 }
 
 function draw() {
