@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Uygarlığın Başlangıcı - Star Map</title>
     <!-- Import Google Fonts for aesthetic typography -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <style>
       :root {
         --glass-bg: rgba(20, 20, 25, 0.75);
@@ -237,21 +237,21 @@
         </div>
         <div class="panel-content">
           <div class="toggle-row">
-            <span>Constellations (Always Visible)</span>
+            <span>Show Constellation Lines</span>
             <label class="toggle-switch">
-              <input type="checkbox" id="toggle-constellations" checked>
+              <input type="checkbox" id="toggle-constellations">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-row">
-            <span>Constellation Names</span>
+            <span>Show Names</span>
             <label class="toggle-switch">
               <input type="checkbox" id="toggle-const-labels">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-row">
-            <span>Star Names (Smart Filter)</span>
+            <span>Show Bright Star Names</span>
             <label class="toggle-switch">
               <input type="checkbox" id="toggle-names">
               <span class="slider"></span>
@@ -262,15 +262,37 @@
         </div>
       </div>
 
-      <!-- Tab 3: Notes -->
-      <div class="panel collapsed" id="panel-notes">
-        <div class="panel-header" onclick="togglePanel('panel-notes')">
-          <h2>Field Notes</h2>
+      <!-- Tab 3: Export / Poster Studio -->
+      <div class="panel collapsed" id="panel-export">
+        <div class="panel-header" onclick="togglePanel('panel-export')">
+          <h2>Poster Studio</h2>
           <span class="toggle-icon">▼</span>
         </div>
         <div class="panel-content">
-          <textarea id="notes-area" rows="6" placeholder="Enter your observation notes here..."></textarea>
-          <button class="action-btn" onclick="saveNotes()">Save Notes</button>
+          <div>
+            <label>Poster Title</label>
+            <input type="text" id="poster-title" value="STAR MAP" placeholder="e.g. THE NIGHT WE MET">
+          </div>
+          <div>
+            <label>Description</label>
+            <input type="text" id="poster-desc" value="Observed from Istanbul" placeholder="e.g. 41.0°N, 28.9°E">
+          </div>
+          
+          <div class="toggle-row">
+            <span>Overlay Date/Time</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-overlay-date">
+              <span class="slider"></span>
+            </label>
+          </div>
+          
+          <div class="toggle-row">
+            <span>Overlay Coordinates</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-overlay-coords">
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -280,30 +302,6 @@
     <script>
       function togglePanel(id) {
         document.getElementById(id).classList.toggle('collapsed');
-      }
-      
-      // Load notes on startup
-      window.onload = function() {
-        let savedNotes = localStorage.getItem('starMapNotes');
-        if (savedNotes) {
-          document.getElementById('notes-area').value = savedNotes;
-        }
-      }
-
-      function saveNotes() {
-        let text = document.getElementById('notes-area').value;
-        localStorage.setItem('starMapNotes', text);
-        
-        // Visual feedback
-        let btn = document.querySelector('#panel-notes .action-btn');
-        let originalText = btn.innerText;
-        btn.innerText = "Saved!";
-        btn.style.background = "rgba(100, 255, 218, 0.2)";
-        
-        setTimeout(() => {
-          btn.innerText = originalText;
-          btn.style.background = "";
-        }, 2000);
       }
     </script>
   </body>

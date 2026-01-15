@@ -1,3 +1,12 @@
+const PALETTE = {
+  background: '#050505',
+  starBase: [255, 255, 255],
+  lineFaint: [255, 255, 255, 15],
+  lineHover: [100, 255, 218, 200],
+  textNormal: [255, 255, 255, 150],
+  textHover: [255, 255, 255, 255]
+};
+
 let stars = [];
 let constellations = [];
 
@@ -9,6 +18,12 @@ let showConstellationLines = false; // Default OFF per request
 let showConstellationLabels = false;
 let showStarNames = false;
 let hoveredConstellationId = null; // Track hovered constellation
+
+// Poster / Overlay Configuration
+let posterTitle = "STAR MAP";
+let posterDesc = "Observed from Istanbul";
+let showOverlayDate = false;
+let showOverlayCoords = false;
 
 // Visualization Scale
 let scaleFactor = 400;
@@ -50,6 +65,7 @@ function loadError(err) {
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
+  textFont('Inter'); // Use the Google Font loaded in HTML
   centerX = width / 2;
   centerY = height / 2;
   
@@ -138,10 +154,23 @@ function setup() {
       saveCanvas('uygarligin_baslangici_' + date.toISOString().slice(0,10), 'png');
     });
   }
+
+  // --- Poster Controls ---
+  let pTitle = select('#poster-title');
+  if (pTitle) pTitle.input(() => { posterTitle = pTitle.value(); redraw(); });
+
+  let pDesc = select('#poster-desc');
+  if (pDesc) pDesc.input(() => { posterDesc = pDesc.value(); redraw(); });
+
+  let tDate = select('#toggle-overlay-date');
+  if (tDate) tDate.changed(() => { showOverlayDate = tDate.checked(); redraw(); });
+
+  let tCoords = select('#toggle-overlay-coords');
+  if (tCoords) tCoords.changed(() => { showOverlayCoords = tCoords.checked(); redraw(); });
 }
 
 function draw() {
-  background('#050505');
+  background(PALETTE.background);
   
   // Draw Horizon Circle (simplistic view)
   noFill();
@@ -216,18 +245,15 @@ function draw() {
   if (constellations) {
     for (let constell of constellations) {
        let isHovered = (constell.id === hoveredConstellationId);
-       let isVisible = showConstellationLines || isHovered;
+       let showLines = showConstellationLines || isHovered;
+       let showLabels = showConstellationLabels || isHovered;
        
-       if (!isVisible) continue;
+       // Optimization: Skip if neither lines nor labels are needed
+       if (!showLines && !showLabels) continue;
        
-       // Visuals
-       if (isHovered) {
-         stroke(100, 255, 218, 200); // Brighter Cyan
-         strokeWeight(1.5);
-       } else {
-         stroke(255, 15); // Extremely faint
-         strokeWeight(1);
-       }
+       // Visuals for Lines
+       let lineStroke = isHovered ? color(PALETTE.lineHover) : color(PALETTE.lineFaint);
+       
        noFill();
        
        // Prepare bounds for Label
@@ -237,7 +263,12 @@ function draw() {
        // Draw Lines
        let coords = constell.geometry.coordinates;
        for (let lineSegments of coords) {
-         beginShape();
+         if (showLines) {
+            stroke(lineStroke);
+            strokeWeight(isHovered ? 1.5 : 1);
+            beginShape();
+         }
+
          for (let point of lineSegments) {
            let ra = point[0];
            let dec = point[1];
@@ -249,7 +280,8 @@ function draw() {
            let pos = equatorialToHorizontal(ha, dec, observerLat);
            if (pos.alt > 0) {
               let proj = projectStereographic(pos.az, pos.alt);
-              vertex(proj.x, proj.y);
+              
+              if (showLines) vertex(proj.x, proj.y);
               
               if (proj.x < minX) minX = proj.x;
               if (proj.x > maxX) maxX = proj.x;
@@ -257,17 +289,19 @@ function draw() {
               if (proj.y > maxY) maxY = proj.y;
               hasPoints = true;
            } else {
-              endShape();
-              beginShape();
+              if (showLines) {
+                endShape();
+                beginShape();
+              }
            }
          }
-         endShape();
+         if (showLines) endShape();
        }
        
        // Draw Label (Screen-Space Bounding Box)
-       if ((showConstellationLabels || isHovered) && hasPoints) {
-          let centerX = (minX + maxX) / 2;
-          let centerY = (minY + maxY) / 2;
+       if (showLabels && hasPoints) {
+          let cx = (minX + maxX) / 2;
+          let cy = (minY + maxY) / 2;
 
           let fullName = (typeof constellationNames !== 'undefined' && constellationNames[constell.id]) 
                          ? constellationNames[constell.id] 
@@ -275,14 +309,14 @@ function draw() {
 
           noStroke();
           if (isHovered) {
-            fill(255);
+            fill(color(PALETTE.textHover));
             textSize(14); // Larger
           } else {
-            fill(255, 150);
+            fill(color(PALETTE.textNormal));
             textSize(10);
           }
           textAlign(CENTER, CENTER);
-          text(fullName, centerX, centerY);
+          text(fullName, cx, cy);
        }
     }
   }
@@ -337,6 +371,61 @@ function draw() {
     noFill();
     circle(hoveredStarPos.x, hoveredStarPos.y, 15);
   }
+  
+  // --- 5. Draw Poster Overlay ---
+  drawPosterOverlay();
+}
+
+function drawPosterOverlay() {
+   // Renders title, description, and metadata for export
+   
+   // Bottom-Left positioning
+   let startX = 30;
+   let startY = height - 30;
+   
+   fill(255);
+   noStroke();
+   textAlign(LEFT, BOTTOM);
+   
+   // Metadata Line
+   let meta = [];
+   if (showOverlayDate) {
+      // Format: YYYY-MM-DD HH:MM
+      let dStr = date.toISOString().replace('T', ' ').slice(0, 16);
+      meta.push(dStr);
+   }
+   if (showOverlayCoords) {
+      let latStr = `${Math.abs(observerLat).toFixed(2)}°${observerLat >= 0 ? 'N' : 'S'}`;
+      let lonStr = `${Math.abs(observerLon).toFixed(2)}°${observerLon >= 0 ? 'E' : 'W'}`;
+      meta.push(`${latStr}, ${lonStr}`);
+   }
+   
+   if (meta.length > 0) {
+     textSize(12);
+     fill(255, 180);
+     text(meta.join("  |  "), startX, startY);
+     startY -= 20;
+   }
+   
+   // Description
+   if (posterDesc && posterDesc.length > 0) {
+     textSize(14);
+     fill(255, 220);
+     text(posterDesc, startX, startY);
+     startY -= 25;
+   }
+   
+   // Title
+   if (posterTitle && posterTitle.length > 0) {
+     textSize(32);
+     // Use the serif font we imported for a "Poster" feel
+     drawingContext.font = "700 32px 'Playfair Display', serif"; 
+     fill(255);
+     text(posterTitle.toUpperCase(), startX, startY);
+   }
+   
+   // Reset font to standard
+   drawingContext.font = "12px 'Inter', sans-serif";
 }
 
 // --- Data Parsing ---
