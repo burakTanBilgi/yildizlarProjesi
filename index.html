@@ -270,12 +270,25 @@
         </div>
         <div class="panel-content">
           <div>
+            <label>Layout Style</label>
+            <select id="layout-select" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); color: white; border-radius: 8px;">
+              <option value="glass-overlay">Glass Overlay (Modern)</option>
+              <option value="side-split">Side Split (Editorial)</option>
+              <option value="bottom-bar">Bottom Bar (Classic)</option>
+            </select>
+          </div>
+
+          <div>
             <label>Poster Title</label>
             <input type="text" id="poster-title" value="STAR MAP" placeholder="e.g. THE NIGHT WE MET">
           </div>
           <div>
             <label>Description</label>
             <input type="text" id="poster-desc" value="Observed from Istanbul" placeholder="e.g. 41.0°N, 28.9°E">
+          </div>
+          <div>
+            <label>Story / Subtitle (Side Layout)</label>
+            <textarea id="poster-story" rows="3" placeholder="Write a short story or dedication..."></textarea>
           </div>
           
           <div class="toggle-row">

@@ -22,6 +22,8 @@ let hoveredConstellationId = null; // Track hovered constellation
 // Poster / Overlay Configuration
 let posterTitle = "STAR MAP";
 let posterDesc = "Observed from Istanbul";
+let posterStory = "";
+let currentLayout = "glass-overlay"; // glass-overlay, side-split, bottom-bar
 let showOverlayDate = false;
 let showOverlayCoords = false;
 
@@ -162,6 +164,12 @@ function setup() {
   let pDesc = select('#poster-desc');
   if (pDesc) pDesc.input(() => { posterDesc = pDesc.value(); redraw(); });
 
+  let pStory = select('#poster-story');
+  if (pStory) pStory.input(() => { posterStory = pStory.value(); redraw(); });
+
+  let lSelect = select('#layout-select');
+  if (lSelect) lSelect.changed(() => { currentLayout = lSelect.value(); redraw(); });
+
   let tDate = select('#toggle-overlay-date');
   if (tDate) tDate.changed(() => { showOverlayDate = tDate.checked(); redraw(); });
 
@@ -170,6 +178,8 @@ function setup() {
 }
 
 function draw() {
+  calculateLayoutMetrics();
+
   background(PALETTE.background);
   
   // Draw Horizon Circle (simplistic view)
@@ -373,59 +383,244 @@ function draw() {
   }
   
   // --- 5. Draw Poster Overlay ---
+  calculateLayoutMetrics();
   drawPosterOverlay();
 }
 
+function calculateLayoutMetrics() {
+  if (currentLayout === 'side-split') {
+    // 30% Left (Text), 70% Right (Map)
+    let mapWidth = width * 0.7;
+    let mapX = width * 0.3;
+    centerX = mapX + mapWidth / 2;
+    centerY = height / 2;
+    // Fit within the map area with some padding
+    scaleFactor = min(mapWidth, height) * 0.38; 
+  } else if (currentLayout === 'bottom-bar') {
+    // 75% Top (Map), 25% Bottom (Text)
+    let mapHeight = height * 0.75;
+    centerX = width / 2;
+    centerY = mapHeight / 2;
+    scaleFactor = min(width, mapHeight) * 0.38;
+  } else {
+    // glass-overlay (Default)
+    centerX = width / 2;
+    centerY = height / 2;
+    // Standard full screen view
+    scaleFactor = min(width, height) * 0.42;
+  }
+}
+
 function drawPosterOverlay() {
-   // Renders title, description, and metadata for export
+   // Renders title, description, and metadata based on layout
    
-   // Bottom-Left positioning
-   let startX = 30;
-   let startY = height - 30;
+   if (currentLayout === 'side-split') {
+     drawSideSplitLayout();
+   } else if (currentLayout === 'bottom-bar') {
+     drawBottomBarLayout();
+   } else {
+     drawGlassOverlayLayout();
+   }
+}
+
+function drawGlassOverlayLayout() {
+   // Modern "Frosted Glass" box in bottom-left
+   let boxWidth = 350;
+   let boxHeight = 160;
+   let padding = 25;
+   let startX = 40;
+   let startY = height - 40;
    
+   // Adjust height based on content
+   if (posterStory.length > 0) boxHeight += 60;
+
+   // Draw Glass Box
+   fill(20, 20, 30, 200); // Dark semi-transparent
+   stroke(255, 30);
+   strokeWeight(1);
+   rect(startX - padding, startY - boxHeight, boxWidth, boxHeight, 12);
+   
+   // Text Anchors
+   let textX = startX;
+   let currentY = startY - boxHeight + padding + 10;
+   
+   // Title
    fill(255);
    noStroke();
-   textAlign(LEFT, BOTTOM);
+   textAlign(LEFT, TOP);
    
-   // Metadata Line
-   let meta = [];
-   if (showOverlayDate) {
-      // Format: YYYY-MM-DD HH:MM
-      let dStr = date.toISOString().replace('T', ' ').slice(0, 16);
-      meta.push(dStr);
-   }
-   if (showOverlayCoords) {
-      let latStr = `${Math.abs(observerLat).toFixed(2)}°${observerLat >= 0 ? 'N' : 'S'}`;
-      let lonStr = `${Math.abs(observerLon).toFixed(2)}°${observerLon >= 0 ? 'E' : 'W'}`;
-      meta.push(`${latStr}, ${lonStr}`);
-   }
-   
-   if (meta.length > 0) {
-     textSize(12);
-     fill(255, 180);
-     text(meta.join("  |  "), startX, startY);
-     startY -= 20;
+   if (posterTitle) {
+     textFont('Playfair Display');
+     textStyle(BOLD);
+     textSize(32);
+     text(posterTitle.toUpperCase(), textX, currentY);
+     currentY += 40;
    }
    
    // Description
-   if (posterDesc && posterDesc.length > 0) {
-     textSize(14);
-     fill(255, 220);
-     text(posterDesc, startX, startY);
-     startY -= 25;
+   textFont('Inter');
+   textStyle(NORMAL);
+   textSize(14);
+   fill(255, 220);
+   if (posterDesc) {
+     text(posterDesc, textX, currentY);
+     currentY += 25;
    }
    
-   // Title
-   if (posterTitle && posterTitle.length > 0) {
-     textSize(32);
-     // Use the serif font we imported for a "Poster" feel
-     drawingContext.font = "700 32px 'Playfair Display', serif"; 
-     fill(255);
-     text(posterTitle.toUpperCase(), startX, startY);
+   // Story / Dedication
+   if (posterStory) {
+     fill(255, 180);
+     textStyle(ITALIC);
+     textSize(12);
+     text(posterStory, textX, currentY, boxWidth - padding*2); // Word wrap
+     currentY += 50;
    }
    
-   // Reset font to standard
-   drawingContext.font = "12px 'Inter', sans-serif";
+   // Metadata (Date/Coords)
+   drawMetadataString(textX, startY - padding);
+}
+
+function drawSideSplitLayout() {
+  // Left Panel (30%)
+  let panelW = width * 0.3;
+  
+  // Draw Panel Background (Masking the stars)
+  fill(5, 5, 5); // Deep Black
+  noStroke();
+  rect(0, 0, panelW, height);
+  
+  // Separator Line
+  stroke(255, 20);
+  line(panelW, 0, panelW, height);
+  
+  // Text Content
+  let margin = 40;
+  let textW = panelW - (margin * 2);
+  let y = 80;
+  
+  noStroke();
+  fill(255);
+  textAlign(LEFT, TOP);
+  
+  // Title (Gold/White)
+  fill(255, 240, 200); 
+  textFont('Playfair Display');
+  textStyle(BOLD);
+  textSize(48);
+  textLeading(55);
+  text(posterTitle.toUpperCase(), margin, y, textW); // Wrap
+  
+  // Estimate height of title for spacing
+  let lines = ceil(textWidth(posterTitle.toUpperCase()) / textW);
+  // If lines are not accurate due to wrapping logic, we might need a better heuristic, 
+  // but standard p5 wrapping usually works with textWidth checks on words.
+  // For safety, let's just add a dynamic spacing or fixed if simple.
+  // Actually, we can assume ~1.2 lines per 10 chars if title is long? 
+  // Let's rely on a simpler spacing for now.
+  let blockHeight = (textWidth(posterTitle.toUpperCase()) > textW) ? 110 : 60;
+  y += blockHeight; 
+  
+  // Description
+  fill(255, 200);
+  textFont('Inter');
+  textStyle(NORMAL);
+  textSize(16);
+  text(posterDesc, margin, y, textW);
+  y += 40;
+  
+  // Story (Longer text)
+  if (posterStory) {
+    fill(255, 160);
+    textFont('Georgia'); // Serif for story
+    textSize(14);
+    textLeading(24);
+    text(posterStory, margin, y, textW, height - y - 100);
+  }
+  
+  // Metadata at Bottom
+  drawMetadataString(margin, height - 50);
+}
+
+function drawBottomBarLayout() {
+  // Bottom Panel (25%)
+  let barH = height * 0.25;
+  let barY = height - barH;
+  
+  // Background
+  fill(10, 10, 12);
+  noStroke();
+  rect(0, barY, width, barH);
+  
+  // Gold Separator
+  stroke(212, 175, 55);
+  strokeWeight(2);
+  line(0, barY, width, barY);
+  
+  noStroke();
+  textAlign(CENTER, CENTER);
+  let centerX = width / 2;
+  let centerY = barY + barH / 2;
+  
+  // Title
+  fill(255);
+  textFont('Playfair Display');
+  textStyle(BOLD);
+  textSize(36);
+  text(posterTitle.toUpperCase(), centerX, centerY - 20);
+  
+  // Description
+  fill(255, 180);
+  textFont('Inter');
+  textStyle(NORMAL);
+  textSize(14);
+  text(posterDesc, centerX, centerY + 20);
+  
+  // Story (Small, if any)
+  if (posterStory) {
+     fill(255, 140);
+     textSize(12);
+     text(posterStory, centerX, centerY + 45);
+  }
+  
+  // Metadata (Split corners)
+  if (showOverlayDate || showOverlayCoords) {
+    fill(255, 100);
+    textFont('Courier New');
+    textSize(12);
+    textAlign(RIGHT, BOTTOM);
+    let meta = getMetadataString();
+    text(meta, width - 30, height - 20);
+  }
+}
+
+function getMetadataString() {
+  let meta = [];
+  if (showOverlayDate) {
+     let dStr = date.toISOString().replace('T', ' ').slice(0, 16);
+     meta.push(dStr);
+  }
+  if (showOverlayCoords) {
+     let latStr = `${Math.abs(observerLat).toFixed(2)}°${observerLat >= 0 ? 'N' : 'S'}`;
+     let lonStr = `${Math.abs(observerLon).toFixed(2)}°${observerLon >= 0 ? 'E' : 'W'}`;
+     meta.push(`${latStr}, ${lonStr}`);
+  }
+  return meta.join("  |  ");
+}
+
+function drawMetadataString(x, y) {
+   let str = getMetadataString();
+   if (str.length > 0) {
+     textFont('Courier New');
+     textSize(12);
+     fill(255, 150);
+     // If layout is side-split, align left. 
+     // If glass overlay, align left.
+     // y is usually baseline.
+     text(str, x, y);
+   }
+   
+   // Reset Font
+   textFont('Inter');
 }
 
 // --- Data Parsing ---

@@ -112,3 +112,15 @@ This project was made for a friend to honor his deceased pet's memory. His reque
 ---> bu haritanın bilgilerinden (yer, zaman, cart curt) ne kadarı indirilen görüntüde de yazacak buna karar verilmesi sağlanılmalı bir çok switch ya da estetik radyokutuları ile
 ---> bu haritanın bi de yanına (ya da başka bir yanına) bir başlık ekleme opsiyonu eklenilmeli
 ---> aynı anda da bir açıklama yazıp yazmama opsiyonu
+
+## Sonraki sefer için notlar:
+
+- Özelleştirme
+-> Grid özelliği gelmeli
+-> Renk (ve yıldızların renginin skalası?) ayarlanabilmeli
+-> şuanki estetik doğru durmuyo çok yazınca
+-> hikayeler ve bulundukları yıllar
+-> belki projeksiyon (tam olarak ne kadar şey değişiyor bilmiyorum) değiştirilir olabilir
+-> dairenin etrafına eklenilebilir çerçeve
+
+- lokal olarak çalıştırıl olduğunda proje klonlanıp webde next.js ile çalışanı yapılsın!
