@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uygarlığın Başlangıcı - Star Map</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #050505; /* Deep Void Black */
+        overflow: hidden;
+        color: #fff;
+        font-family: sans-serif;
+      }
+      #controls {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        z-index: 100;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #333;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 0.9em;
+        color: #aaa;
+      }
+      input[type="datetime-local"] {
+        background: #111;
+        border: 1px solid #444;
+        color: #fff;
+        padding: 5px;
+        border-radius: 4px;
+        font-family: inherit;
+      }
+    </style>
+    <!-- Import p5.js via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  </head>
+  <body>
+    <div id="controls">
+      <label for="date-picker">Observation Date & Time</label>
+      <input type="datetime-local" id="date-picker">
+    </div>
+    <script src="sketch.js"></script>
+  </body>
+</html>
