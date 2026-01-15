@@ -5,7 +5,7 @@ let constellations = [];
 let observerLat = 41.0082; // Istanbul Latitude
 let observerLon = 28.9784; // Istanbul Longitude
 let date = new Date(); // Current date/time
-let showConstellations = true;
+let showConstellationLines = false; // Default OFF per request
 let showConstellationLabels = false;
 let showStarNames = false;
 let hoveredConstellationId = null; // Track hovered constellation
@@ -90,8 +90,9 @@ function setup() {
   // Handle Toggles
   let toggleConst = select('#toggle-constellations');
   if (toggleConst) {
+    toggleConst.checked(showConstellationLines); // Sync UI
     toggleConst.changed(() => {
-      showConstellations = toggleConst.checked();
+      showConstellationLines = toggleConst.checked();
       redraw();
     });
   }
@@ -166,143 +167,17 @@ function draw() {
   // Calculate Local Sidereal Time
   let lst = calculateLST(date, observerLon);
 
-  // --- 1. Process Constellations (Project & Calculate Bounds) ---
-  let visibleConsts = [];
-  hoveredConstellationId = null;
-  let minDist = 150; // Threshold for hover detection
-
-  if (constellations) {
-    for (let constell of constellations) {
-      // Prepare storage for projected paths
-      let screenPaths = [];
-      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-      let hasVisiblePoints = false;
-
-      let coords = constell.geometry.coordinates;
-      
-      for (let lineSegments of coords) {
-        let currentPath = [];
-        
-        for (let point of lineSegments) {
-          let ra = point[0];
-          let dec = point[1];
-          
-          // Project Point
-          let ha = lst - ra;
-          while (ha < -180) ha += 360;
-          while (ha > 180) ha -= 360;
-
-          let pos = equatorialToHorizontal(ha, dec, observerLat);
-          
-          if (pos.alt > 0) {
-             let proj = projectStereographic(pos.az, pos.alt);
-             currentPath.push(proj);
-             
-             // Update Bounds
-             if (proj.x < minX) minX = proj.x;
-             if (proj.x > maxX) maxX = proj.x;
-             if (proj.y < minY) minY = proj.y;
-             if (proj.y > maxY) maxY = proj.y;
-             
-             hasVisiblePoints = true;
-          } else {
-             // Break lines at horizon
-             if (currentPath.length > 0) {
-               screenPaths.push(currentPath);
-               currentPath = [];
-             }
-          }
-        }
-        if (currentPath.length > 0) screenPaths.push(currentPath);
-      }
-
-      if (hasVisiblePoints) {
-        let centerX = (minX + maxX) / 2;
-        let centerY = (minY + maxY) / 2;
-        
-        // Calculate dist for hover
-        let d = dist(mouseX, mouseY, centerX, centerY);
-        let isActive = false;
-        
-        // Simple closest-check logic
-        // We defer assignment until we check all, but for simplicity:
-        // We'll collect candidates and pick closest later if needed.
-        // For now, let's just store the data.
-        
-        visibleConsts.push({
-          id: constell.id,
-          paths: screenPaths,
-          center: createVector(centerX, centerY),
-          dist: d
-        });
-      }
-    }
-  }
-
-  // Find the single closest constellation for hover
-  let closest = null;
-  let closestVal = minDist;
-  for (let c of visibleConsts) {
-    if (c.dist < closestVal) {
-      closestVal = c.dist;
-      closest = c;
-    }
-  }
-  if (closest) hoveredConstellationId = closest.id;
-
-  // --- 2. Draw Constellations ---
-  strokeWeight(1);
+  // --- 1. Pre-calculate Stars & Detect Star Hover ---
+  // We need to know which star is hovered BEFORE we draw constellations
+  // so we can light up the correct constellation lines.
   
-  for (let c of visibleConsts) {
-     let isHovered = (c.id === hoveredConstellationId);
-     let isVisible = showConstellations || isHovered;
-     
-     if (!isVisible) continue;
-     
-     // Visuals
-     if (isHovered) {
-       stroke(100, 255, 218, 200); // Brighter Cyan
-       strokeWeight(1.5);
-     } else {
-       stroke(255, 15); // Extremely faint
-       strokeWeight(1);
-     }
-     noFill();
-     
-     // Draw Lines
-     for (let path of c.paths) {
-       beginShape();
-       for (let p of path) {
-         vertex(p.x, p.y);
-       }
-       endShape();
-     }
-     
-     // Draw Label
-     if (showConstellationLabels || isHovered) {
-        let fullName = (typeof constellationNames !== 'undefined' && constellationNames[c.id]) 
-                       ? constellationNames[c.id] 
-                       : c.id;
-
-        noStroke();
-        if (isHovered) {
-          fill(255);
-          textSize(14); // Larger
-        } else {
-          fill(255, 150);
-          textSize(10);
-        }
-        textAlign(CENTER, CENTER);
-        text(fullName, c.center.x, c.center.y);
-     }
-  }
-
-  // --- 3. Draw Stars ---
-  noStroke();
-  let closestDist = 15;
+  let visibleStars = [];
+  let closestDist = 15; // Strict Star Hover Threshold (15px)
   let hoveredStar = null;
-  let hoveredPos = null;
+  let hoveredStarPos = null;
   
+  hoveredConstellationId = null; // Reset
+
   for (let star of stars) {
     let ha = lst - star.ra;
     while (ha < -180) ha += 360;
@@ -313,62 +188,155 @@ function draw() {
     if (pos.alt > 0) {
       let projected = projectStereographic(pos.az, pos.alt);
       
-      // Render Star
-      let size = map(star.mag, 6, -1.5, 0.5, 4, true);
-      let starColor = bvToColor(star.bv);
-      starColor.setAlpha(200);
-      fill(starColor);
-      circle(projected.x, projected.y, size);
-
-      // --- Smart Filtering (Refined) ---
-      // 1. Global Rule: Show if Toggle ON AND Mag < 2.0 (Very Bright)
-      let showGlobal = showStarNames && star.mag < 2.0;
+      // Store for next pass to avoid re-projecting
+      visibleStars.push({
+        star: star,
+        x: projected.x,
+        y: projected.y
+      });
       
-      // 2. Hover Rule: Show if Star is in Hovered Constellation AND Mag < 5.0 (Detail)
-      // Check ID only if it exists
-      let isHoveredConst = (hoveredConstellationId && star.constellationId === hoveredConstellationId);
-      let showHover = isHoveredConst && star.mag < 5.0;
-      
-      if (showGlobal || showHover) {
-        fill(255, 180);
-        textAlign(CENTER, BOTTOM);
-        textSize(9);
-        let label = star.name || "";
-        if (label) text(label, projected.x, projected.y - 5);
-      }
-
-      // Star Hover Check
+      // Check Hover
       let d = dist(mouseX, mouseY, projected.x, projected.y);
       if (d < closestDist) {
         closestDist = d;
         hoveredStar = star;
-        hoveredPos = projected;
+        hoveredStarPos = projected;
       }
     }
   }
+
+  // Set Hovered Constellation based on Hovered Star
+  if (hoveredStar && hoveredStar.constellationId) {
+    hoveredConstellationId = hoveredStar.constellationId;
+  }
+
+  // --- 2. Draw Constellations ---
+  strokeWeight(1);
   
-  // Draw Tooltip for Hovered Star
-  if (hoveredStar) {
+  if (constellations) {
+    for (let constell of constellations) {
+       let isHovered = (constell.id === hoveredConstellationId);
+       let isVisible = showConstellationLines || isHovered;
+       
+       if (!isVisible) continue;
+       
+       // Visuals
+       if (isHovered) {
+         stroke(100, 255, 218, 200); // Brighter Cyan
+         strokeWeight(1.5);
+       } else {
+         stroke(255, 15); // Extremely faint
+         strokeWeight(1);
+       }
+       noFill();
+       
+       // Prepare bounds for Label
+       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+       let hasPoints = false;
+
+       // Draw Lines
+       let coords = constell.geometry.coordinates;
+       for (let lineSegments of coords) {
+         beginShape();
+         for (let point of lineSegments) {
+           let ra = point[0];
+           let dec = point[1];
+           
+           let ha = lst - ra;
+           while (ha < -180) ha += 360;
+           while (ha > 180) ha -= 360;
+
+           let pos = equatorialToHorizontal(ha, dec, observerLat);
+           if (pos.alt > 0) {
+              let proj = projectStereographic(pos.az, pos.alt);
+              vertex(proj.x, proj.y);
+              
+              if (proj.x < minX) minX = proj.x;
+              if (proj.x > maxX) maxX = proj.x;
+              if (proj.y < minY) minY = proj.y;
+              if (proj.y > maxY) maxY = proj.y;
+              hasPoints = true;
+           } else {
+              endShape();
+              beginShape();
+           }
+         }
+         endShape();
+       }
+       
+       // Draw Label (Screen-Space Bounding Box)
+       if ((showConstellationLabels || isHovered) && hasPoints) {
+          let centerX = (minX + maxX) / 2;
+          let centerY = (minY + maxY) / 2;
+
+          let fullName = (typeof constellationNames !== 'undefined' && constellationNames[constell.id]) 
+                         ? constellationNames[constell.id] 
+                         : constell.id;
+
+          noStroke();
+          if (isHovered) {
+            fill(255);
+            textSize(14); // Larger
+          } else {
+            fill(255, 150);
+            textSize(10);
+          }
+          textAlign(CENTER, CENTER);
+          text(fullName, centerX, centerY);
+       }
+    }
+  }
+
+  // --- 3. Draw Stars ---
+  noStroke();
+  
+  for (let item of visibleStars) {
+    let star = item.star;
+    let x = item.x;
+    let y = item.y;
+    
+    // Render Star
+    let size = map(star.mag, 6, -1.5, 0.5, 4, true);
+    let starColor = bvToColor(star.bv);
+    starColor.setAlpha(200);
+    fill(starColor);
+    circle(x, y, size);
+
+    // --- Star Name Visibility ---
+    // Rule 1: Always show hovered star name.
+    // Rule 2: Show global bright stars (Mag < 2.0) if Toggle ON.
+    // Rule 3: Do NOT show other stars just because constellation is hovered.
+    
+    let isHoveredStar = (star === hoveredStar);
+    let showGlobal = showStarNames && star.mag < 2.0;
+    
+    // We only draw the text here if it's NOT the hovered star (hovered star gets special tooltip/label)
+    // Or we can just draw it here. Let's draw here for consistency, but Hovered gets priority.
+    
+    if (showGlobal && !isHoveredStar) {
+      fill(255, 180);
+      textAlign(CENTER, BOTTOM);
+      textSize(9);
+      if (star.name) text(star.name, x, y - 5);
+    }
+  }
+  
+  // --- 4. Tooltip for Hovered Star ---
+  if (hoveredStar && hoveredStarPos) {
     fill(255);
     noStroke();
     textAlign(LEFT, BOTTOM);
-    let label = hoveredStar.name || `HR ${hoveredStar.HR}`; // Fallback if name is empty
+    let label = hoveredStar.name || `HR ${hoveredStar.HR}`; 
     if (!label || label === "undefined") label = `Mag: ${hoveredStar.mag}`;
     
-    text(label, hoveredPos.x + 10, hoveredPos.y - 10);
+    // Draw slightly offset
+    text(label, hoveredStarPos.x + 10, hoveredStarPos.y - 10);
     
-    stroke(255, 100);
+    // Highlight Circle
+    stroke(255, 150);
     noFill();
-    circle(hoveredPos.x, hoveredPos.y, 15);
+    circle(hoveredStarPos.x, hoveredStarPos.y, 15);
   }
-  
-  /* Debug Info - Disabled for Phase 2 Minimalist View
-  fill(150);
-  textAlign(LEFT, TOP);
-  text(`Stars: ${visibleCount} / ${stars.length}`, 10, 10);
-  text(`Date: ${date.toISOString()}`, 10, 30);
-  text(`LST: ${lst.toFixed(2)}°`, 10, 50);
-  */
 }
 
 // --- Data Parsing ---

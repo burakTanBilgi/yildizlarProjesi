@@ -89,8 +89,26 @@ PLAN 2.2 sonrası yorumu (PLAN-2.2.Y):
 
 ## Projenin hikayesi:
 
-This project was made for a friend to honor his deceased pet's memory. His request was to have a poster of a star map on the day he found his pet. His overromantacised request only solution i (gemini) could find (maybe there is another service like this idk) on the internet was €70 - €80. Because that we do not excrete money i took this request as a challenge to see if i could do it in a session where i was feeling a bit medicated.
+This project was made for a friend to honor his deceased pet's memory. His request was to have a poster of a star map on the day he found his pet. His overromantacised request's only solution i (gemini) could find (maybe there is another service like this idk) on the internet was €70 - €80. Because that we do not excrete money i took this request as a challenge to see if i could do it in a session where i was feeling a bit medicated.
 
 ## PLAN-2.2.Y.Y
 
-...
+- HALA readme'yi güncellemiyor
+- Artık Takımyıldızlarını göster deyince bütün takımyıldızları arası çizgiler gözüküyor
+-> bu ayarın adı "takımyıldızlar arası bağlantıları göster" misal bir şey olmalı
+-> başka bir ayar "takımyıldızların adını göster" olmalı
+->> eğer takımyıldızlarını göster açık değil ise
+->> takımyıldızların içinde bulunduğu bir yıldızın üzerinden havalanılmıyorsa eğer (şuanki algılama radiusu fazla geniş) bu takımyıldızı veya yıldız focus/highlight olmamalı
+->> eğer üzerine gelinen yıldız bir takım yıldızına ait ise o yıldızın adı, takımyıldızı arası çizgiler ve takımyıldızı gözükmeli.
+-->> takımyıldızındaki diğer yıldızların isimleri gözükmemeli
+
+## PLAN-2.2.Y3
+
+-> constellations (always visible) açık değil ancak constellation names açık ise constellation names çalışmıyor
+-> kullanılan renklerin hepsinin ne için kullanıldığı ve renk kodlarını istiyorum
+-> options adları daha düzgün adlara değişterilsin
+-> Field Notes kısmında save notes ne boka yarıyor bilmiyorum
+--> oranın adı field notes olmamalı o fieldın adı fotoğrafa eklenecek eklentileri anlatan bir başlık olmalı.
+---> bu haritanın bilgilerinden (yer, zaman, cart curt) ne kadarı indirilen görüntüde de yazacak buna karar verilmesi sağlanılmalı bir çok switch ya da estetik radyokutuları ile
+---> bu haritanın bi de yanına (ya da başka bir yanına) bir başlık ekleme opsiyonu eklenilmeli
+---> aynı anda da bir açıklama yazıp yazmama opsiyonu
