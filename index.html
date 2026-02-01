@@ -4,189 +4,295 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Uygarlığın Başlangıcı - Star Map</title>
-    <!-- Import Google Fonts for aesthetic typography -->
+    <!-- Import Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
       :root {
-        --glass-bg: rgba(20, 20, 25, 0.75);
-        --glass-border: rgba(255, 255, 255, 0.1);
+        --glass-bg: rgba(10, 10, 12, 0.65);
+        --glass-border: rgba(255, 255, 255, 0.08);
         --accent: #64ffda;
         --text-main: #e6e6e6;
         --text-dim: #94a3b8;
+        --danger: #ff5f5f;
       }
       body {
         margin: 0;
         padding: 0;
-        background-color: #050505; /* Deep Void Black */
+        background-color: #050505;
         overflow: hidden;
         color: var(--text-main);
         font-family: 'Inter', sans-serif;
       }
-      
-      /* Sidebar Container */
-      #sidebar {
+
+      /* --- HUD STRUCTURE --- */
+      #hud-container {
         position: absolute;
-        top: 20px;
-        left: 20px;
-        bottom: 20px;
-        width: 320px;
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
+        top: 0; left: 0; width: 100%; height: 100%;
+        pointer-events: none; /* Let clicks pass to canvas */
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        grid-template-columns: 1fr auto;
         z-index: 100;
-        pointer-events: none; /* Let clicks pass through gaps */
       }
 
-      /* Common Panel Style */
-      .panel {
-        background: var(--glass-bg);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid var(--glass-border);
-        border-radius: 16px;
-        padding: 0;
-        pointer-events: auto;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
-      }
-
-      .panel-header {
-        padding: 12px 16px;
-        background: rgba(255, 255, 255, 0.03);
-        border-bottom: 1px solid var(--glass-border);
-        cursor: pointer;
+      /* TOP BAR */
+      #hud-top {
+        grid-column: 1 / -1;
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        user-select: none;
-      }
-      .panel-header h2 {
-        margin: 0;
-        font-size: 0.95rem;
-        font-weight: 500;
-        color: var(--accent);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-      .panel-header .toggle-icon {
-        font-size: 1.2rem;
-        color: var(--text-dim);
-        transition: transform 0.3s;
+        align-items: flex-start;
+        padding: 20px 25px;
+        background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+        pointer-events: auto;
+        z-index: 300; /* Ensure on top of overlays */
+        position: relative;
       }
 
-      .panel-content {
-        padding: 16px;
+      .hud-group {
         display: flex;
-        flex-direction: column;
-        gap: 12px;
-        overflow-y: auto;
-        max-height: 400px; /* Scrollable if long */
-      }
-
-      /* Collapsed State */
-      .panel.collapsed .panel-content {
-        display: none;
-      }
-      .panel.collapsed .panel-header .toggle-icon {
-        transform: rotate(-90deg);
+        gap: 20px;
+        align-items: center;
       }
       
-      /* Form Elements */
-      label {
-        font-size: 0.8rem;
-        color: var(--text-dim);
-        margin-bottom: 4px;
-        display: block;
+      .brand-logo {
+        font-weight: 400;
+        font-size: 1.1rem; 
+        letter-spacing: -0.05em;
+        font-family: 'Inter', sans-serif;
+        color: var(--text-main);
+        opacity: 0.8;
       }
-      input[type="text"],
-      input[type="number"],
-      input[type="datetime-local"],
-      textarea {
-        background: rgba(0, 0, 0, 0.4);
-        border: 1px solid var(--glass-border);
-        color: #fff;
+
+      .hud-btn-text {
+        background: transparent;
+        border: none;
+        color: var(--text-main);
+        font-family: 'Inter', sans-serif;
+        font-size: 0.9rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
         padding: 8px 12px;
         border-radius: 8px;
-        font-family: inherit;
-        width: 100%;
-        box-sizing: border-box;
-        transition: border-color 0.2s;
+        transition: background 0.2s;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
       }
-      input:focus, textarea:focus {
-        outline: none;
+      .hud-btn-text:hover {
+        background: rgba(255,255,255,0.1);
+      }
+      .hud-btn-text i, .hud-btn-text svg {
+        color: var(--accent);
+      }
+
+      /* RIGHT BAR (Tools) */
+      #hud-right {
+        grid-column: 2;
+        grid-row: 2;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 15px;
+        padding-right: 20px;
+        pointer-events: auto;
+        z-index: 300; /* Ensure on top of overlays */
+        position: relative;
+      }
+
+      .icon-btn {
+        width: 44px;
+        height: 44px;
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        color: var(--text-dim);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        backdrop-filter: blur(8px);
+        position: relative;
+      }
+      .icon-btn:hover {
+        color: var(--accent);
+        border-color: var(--accent);
+        transform: scale(1.05);
+      }
+      .icon-btn.active {
+        background: rgba(100, 255, 218, 0.15);
+        color: var(--accent);
         border-color: var(--accent);
       }
       
-      .row {
-        display: flex;
-        gap: 10px;
+      /* Tooltips */
+      .icon-btn::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        right: 110%;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 4px 8px;
+        font-size: 12px;
+        border-radius: 4px;
+        opacity: 0;
+        pointer-events: none;
+        white-space: nowrap;
+        transition: opacity 0.2s;
       }
-      .col {
-        flex: 1;
+      .icon-btn:hover::after {
+        opacity: 1;
       }
 
-      /* Toggles */
-      .toggle-row {
+      /* MODALS as SIDE PANELS */
+      .modal-overlay {
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: transparent;
+        backdrop-filter: none;
+        z-index: 200;
+        display: flex;
+        justify-content: flex-end; /* Align Right */
+        align-items: flex-start;
+        opacity: 0;
+        visibility: hidden; /* Hide completely when closed */
+        pointer-events: none; /* Let clicks pass through to map */
+        transition: opacity 0.3s, visibility 0.3s;
+      }
+      .modal-overlay.open {
+        opacity: 1;
+        visibility: visible;
+        /* Note: We keep pointer-events: none on overlay so map is clickable */
+      }
+
+      .modal {
+        background: rgba(20, 20, 25, 0.95);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        padding: 25px;
+        width: 380px;
+        max-width: 90%;
+        box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+        transform: translateX(50px);
+        transition: transform 0.3s ease-out;
+        pointer-events: none; /* Default: don't capture clicks when invisible */
+        margin: 80px 80px 20px 0; /* Increased right margin to keep toolbar accessible */
+        max-height: calc(100vh - 100px);
+        overflow-y: auto;
+      }
+      .modal-overlay.open .modal {
+        transform: translateX(0);
+        pointer-events: auto; /* Enable clicks only when open */
+      }
+
+      .modal h2 {
+        margin-top: 0;
+        font-size: 1.2rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 4px 0;
+        margin-bottom: 20px;
+        color: var(--text-gold);
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        padding-bottom: 10px;
       }
-      .toggle-switch {
-        position: relative;
+
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar { width: 8px; }
+      ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+      ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+      /* Form Styles */
+      .form-group { margin-bottom: 15px; }
+      label { display: block; color: var(--text-dim); font-size: 0.8rem; margin-bottom: 5px; }
+      
+      input, select, textarea {
+        background: rgba(20, 20, 25, 0.95); /* Opaque dark background */
+        border: 1px solid var(--glass-border);
+        color: white;
+        padding: 10px;
+        border-radius: 8px;
+        width: 100%;
+        box-sizing: border-box;
+        font-family: 'Inter', sans-serif;
+        appearance: none; /* Remove default styling */
+        -webkit-appearance: none;
+      }
+      /* Custom Select Arrow */
+      select {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 16px;
+        padding-right: 30px;
+      }
+
+      /* Fix for Unreadable Dropdowns */
+      select option {
+        background-color: #141419;
+        color: white;
+      }
+      
+      input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+
+      /* Custom Checkboxes & Radios */
+      input[type="checkbox"], input[type="radio"] {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 18px;
+        height: 18px;
+        border: 1px solid var(--text-dim);
+        border-radius: 4px;
         display: inline-block;
-        width: 40px;
-        height: 20px;
-      }
-      .toggle-switch input { opacity: 0; width: 0; height: 0; }
-      .slider {
-        position: absolute;
+        position: relative;
         cursor: pointer;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background-color: #333;
-        transition: .4s;
-        border-radius: 20px;
+        vertical-align: middle;
+        margin-right: 8px;
+        background: transparent;
       }
-      .slider:before {
+      input[type="radio"] { border-radius: 50%; }
+      
+      input[type="checkbox"]:checked, input[type="radio"]:checked {
+        background-color: var(--accent);
+        border-color: var(--accent);
+      }
+      
+      input[type="checkbox"]:checked::after {
+        content: '';
         position: absolute;
-        content: "";
-        height: 16px;
-        width: 16px;
-        left: 2px;
-        bottom: 2px;
-        background-color: white;
-        transition: .4s;
+        left: 5px; top: 1px;
+        width: 4px; height: 10px;
+        border: solid black;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+      }
+      
+      input[type="radio"]:checked::after {
+        content: '';
+        position: absolute;
+        top: 4px; left: 4px;
+        width: 8px; height: 8px;
+        background: black;
         border-radius: 50%;
       }
-      input:checked + .slider { background-color: var(--accent); }
-      input:checked + .slider:before { transform: translateX(20px); }
-
-      /* Buttons */
-      button.action-btn {
-        width: 100%;
-        padding: 10px;
-        margin-top: 10px;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid var(--glass-border);
-        color: var(--text-main);
+      
+      .btn-primary {
+        background: var(--accent);
+        color: #000;
+        border: none;
+        padding: 12px;
         border-radius: 8px;
+        width: 100%;
+        font-weight: 600;
         cursor: pointer;
-        transition: all 0.2s;
-        font-weight: 500;
+        margin-top: 10px;
       }
-      button.action-btn:hover {
-        background: rgba(255, 255, 255, 0.1);
-        border-color: var(--text-dim);
-      }
-
-      /* Scrollbar */
-      ::-webkit-scrollbar { width: 6px; }
-      ::-webkit-scrollbar-track { background: transparent; }
-      ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
-      ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+      .btn-primary:hover { opacity: 0.9; }
 
     </style>
     <!-- Import p5.js locally -->
@@ -194,122 +300,184 @@
   </head>
   <body>
     
-    <div id="sidebar">
+    <div id="hud-container">
       
-      <!-- Tab 1: Location & Info -->
-      <div class="panel" id="panel-info">
-        <div class="panel-header" onclick="togglePanel('panel-info')">
-          <h2>Location & Time</h2>
-          <span class="toggle-icon">▼</span>
+      <!-- TOP BAR -->
+      <div id="hud-top">
+        <div class="hud-group">
+          <div class="brand-logo">btb</div>
         </div>
-        <div class="panel-content">
-          <div>
-            <label>Observation Date</label>
-            <input type="datetime-local" id="date-picker">
-          </div>
-          <div class="row">
-            <div class="col">
-              <label>Latitude</label>
-              <input type="number" id="lat-input" value="41.0082" step="0.0001">
-            </div>
-            <div class="col">
-              <label>Longitude</label>
-              <input type="number" id="lon-input" value="28.9784" step="0.0001">
-            </div>
-          </div>
-          <button class="action-btn" id="btn-location" style="margin-top: 5px; font-size: 0.8rem;">📍 Use My Location</button>
-          
-          <div style="font-size: 0.75rem; color: #666; font-style: italic; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
-            <div><strong>Projection:</strong> Stereographic</div>
-            <div><strong>Center:</strong> Zenith</div>
-            <div><strong>Data:</strong> Yale Bright Star Catalog</div>
-          </div>
+        
+        <div class="hud-group">
+          <button class="hud-btn-text" onclick="openModal('modal-location')">
+            <i data-lucide="map-pin"></i> <span id="display-location">Istanbul, TR</span>
+          </button>
+          <button class="hud-btn-text" onclick="openModal('modal-time')">
+            <i data-lucide="clock"></i> <span id="display-date">Now</span>
+          </button>
         </div>
       </div>
 
-      <!-- Tab 2: Options -->
-      <div class="panel" id="panel-options">
-        <div class="panel-header" onclick="togglePanel('panel-options')">
-          <h2>Display Options</h2>
-          <span class="toggle-icon">▼</span>
+      <!-- RIGHT TOOLBAR -->
+      <div id="hud-right">
+        <!-- Visualization Toggles -->
+        <div class="icon-btn active" id="btn-toggle-lines" data-tooltip="Constellation Lines">
+          <i data-lucide="share-2"></i>
         </div>
-        <div class="panel-content">
-          <div class="toggle-row">
-            <span>Show Constellation Lines</span>
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggle-constellations">
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="toggle-row">
-            <span>Show Names</span>
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggle-const-labels">
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="toggle-row">
-            <span>Show Bright Star Names</span>
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggle-names">
-              <span class="slider"></span>
-            </label>
-          </div>
-          
-          <button id="save-btn" class="action-btn">Download Capture</button>
+        <div class="icon-btn" id="btn-toggle-labels" data-tooltip="Constellation Names">
+          <i data-lucide="type"></i>
         </div>
-      </div>
+        <div class="icon-btn" id="btn-toggle-stars" data-tooltip="Bright Star Names">
+          <i data-lucide="star"></i>
+        </div>
+        
+        <!-- Story Mode Toggle -->
+        <div class="icon-btn active" id="btn-toggle-story" data-tooltip="Story Mode (Click Constellations)">
+          <i data-lucide="book-open"></i>
+        </div>
 
-      <!-- Tab 3: Export / Poster Studio -->
-      <div class="panel collapsed" id="panel-export">
-        <div class="panel-header" onclick="togglePanel('panel-export')">
-          <h2>Poster Studio</h2>
-          <span class="toggle-icon">▼</span>
+        <div class="icon-btn" onclick="openModal('modal-grids')" data-tooltip="Grid Options">
+          <i data-lucide="grid"></i>
         </div>
-        <div class="panel-content">
-          <div>
-            <label>Layout Style</label>
-            <select id="layout-select" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); color: white; border-radius: 8px;">
-              <option value="glass-overlay">Glass Overlay (Modern)</option>
-              <option value="side-split">Side Split (Editorial)</option>
-              <option value="bottom-bar">Bottom Bar (Classic)</option>
-            </select>
-          </div>
-
-          <div>
-            <label>Poster Title</label>
-            <input type="text" id="poster-title" value="STAR MAP" placeholder="e.g. THE NIGHT WE MET">
-          </div>
-          <div>
-            <label>Description</label>
-            <input type="text" id="poster-desc" value="Observed from Istanbul" placeholder="e.g. 41.0°N, 28.9°E">
-          </div>
-          <div>
-            <label>Story / Subtitle (Side Layout)</label>
-            <textarea id="poster-story" rows="3" placeholder="Write a short story or dedication..."></textarea>
-          </div>
-          
-          <div class="toggle-row">
-            <span>Overlay Date/Time</span>
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggle-overlay-date">
-              <span class="slider"></span>
-            </label>
-          </div>
-          
-          <div class="toggle-row">
-            <span>Overlay Coordinates</span>
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggle-overlay-coords">
-              <span class="slider"></span>
-            </label>
-          </div>
+        
+        <div style="height: 20px;"></div> <!-- Spacer -->
+        
+        <div class="icon-btn" onclick="openModal('modal-poster')" data-tooltip="Poster Studio">
+          <i data-lucide="layout-template"></i>
+        </div>
+        
+        <div class="icon-btn" id="save-btn" data-tooltip="Download Snapshot">
+          <i data-lucide="camera"></i>
         </div>
       </div>
 
     </div>
 
-    <!-- Project Scripts (Refactored) -->
+    <!-- MODAL: LOCATION -->
+    <div id="modal-location" class="modal-overlay">
+      <div class="modal">
+        <h2>Location Settings</h2>
+        
+        <div class="form-group">
+          <div style="display: flex; gap: 10px;">
+            <div style="flex:1;">
+              <label>Latitude</label>
+              <input type="number" id="lat-input" step="0.0001">
+            </div>
+            <div style="flex:1;">
+              <label>Longitude</label>
+              <input type="number" id="lon-input" step="0.0001">
+            </div>
+          </div>
+        </div>
+        
+        <button class="btn-primary" id="btn-location-gps">📍 Use My GPS Location</button>
+      </div>
+    </div>
+
+    <!-- MODAL: TIME -->
+    <div id="modal-time" class="modal-overlay">
+      <div class="modal">
+        <h2>Time Settings</h2>
+        
+        <div class="form-group">
+          <label>Observation Date & Time</label>
+          <input type="datetime-local" id="date-picker">
+        </div>
+        
+        <button class="btn-primary" id="btn-time-now" style="background: transparent; border: 1px solid var(--glass-border); color: var(--text-main);">
+          Reset to Now
+        </button>
+      </div>
+    </div>
+
+    <!-- MODAL: GRIDS -->
+    <div id="modal-grids" class="modal-overlay">
+      <div class="modal">
+        <h2>Grid Options</h2>
+        
+        <div class="form-group">
+          <label style="margin-bottom: 10px;">Select Grid Type</label>
+          
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <label style="display:flex; align-items:center; gap: 10px; cursor: pointer;">
+              <input type="radio" name="grid-type" value="horizontal" checked style="width:auto;"> Horizontal (Alt-Azimuth)
+            </label>
+            <label style="display:flex; align-items:center; gap: 10px; cursor: pointer;">
+              <input type="radio" name="grid-type" value="equatorial" style="width:auto;"> Equatorial (Celestial)
+            </label>
+            <label style="display:flex; align-items:center; gap: 10px; cursor: pointer;">
+              <input type="radio" name="grid-type" value="ecliptic" style="width:auto;"> Ecliptic
+            </label>
+            <label style="display:flex; align-items:center; gap: 10px; cursor: pointer;">
+              <input type="radio" name="grid-type" value="galactic" style="width:auto;"> Galactic
+            </label>
+            <label style="display:flex; align-items:center; gap: 10px; cursor: pointer;">
+              <input type="radio" name="grid-type" value="supergalactic" style="width:auto;"> Supergalactic
+            </label>
+            <label style="display:flex; align-items:center; gap: 10px; cursor: pointer;">
+              <input type="radio" name="grid-type" value="healpix" style="width:auto;"> HEALPix (Base 12)
+            </label>
+          </div>
+        </div>
+        
+        <div class="form-group">
+             <label style="display:flex; align-items:center; gap: 10px; margin-top:15px;">
+                <input type="checkbox" id="toggle-grid-enable" style="width:auto;"> Show Grid
+            </label>
+             <label style="display:flex; align-items:center; gap: 10px; margin-top:5px;">
+                <input type="checkbox" id="toggle-boundaries" style="width:auto;"> Show IAU Boundaries
+            </label>
+             <label style="display:flex; align-items:center; gap: 10px; margin-top:5px;">
+                <input type="checkbox" id="toggle-highlight-selected" style="width:auto;" checked> Highlight Selected Constellation
+            </label>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- MODAL: POSTER STUDIO -->
+    <div id="modal-poster" class="modal-overlay">
+      <div class="modal">
+        <h2>Poster Studio</h2>
+        
+        <div class="form-group">
+          <label>Layout Style</label>
+          <select id="layout-select">
+            <option value="glass-overlay">Glass Overlay (Modern)</option>
+            <option value="side-split">Side Split (Editorial)</option>
+            <option value="bottom-bar">Bottom Bar (Classic)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Title</label>
+          <input type="text" id="poster-title" placeholder="THE NIGHT WE MET">
+        </div>
+
+        <div class="form-group">
+          <label>Subtitle</label>
+          <input type="text" id="poster-desc" placeholder="e.g. Observed from Istanbul">
+        </div>
+
+        <div class="form-group">
+          <label>Story / Dedication</label>
+          <textarea id="poster-story" rows="3" placeholder="Write your dedication..."></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label style="display:flex; align-items:center; gap: 10px;">
+                <input type="checkbox" id="toggle-overlay-date" style="width:auto;"> Show Date on Poster
+            </label>
+            <label style="display:flex; align-items:center; gap: 10px;">
+                <input type="checkbox" id="toggle-overlay-coords" style="width:auto;"> Show Coordinates on Poster
+            </label>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Project Scripts -->
     <script src="globals.js"></script>
     <script src="constellation_data.js"></script>
     <script src="mythology_data.js"></script>
@@ -317,10 +485,44 @@
     <script src="data_loader.js"></script>
     <script src="poster_engine.js"></script>
     <script src="sketch.js"></script>
+    
     <script>
-      function togglePanel(id) {
-        document.getElementById(id).classList.toggle('collapsed');
+      // Initialize Icons
+      lucide.createIcons();
+
+      function openModal(id) {
+        let target = document.getElementById(id);
+        let isOpen = target.classList.contains('open');
+
+        // Close all modals first (Single Open Tab Policy)
+        document.querySelectorAll('.modal-overlay').forEach(el => {
+           el.classList.remove('open');
+        });
+
+        // Toggle: If it wasn't open, open it now. If it was open, it stays closed.
+        if (!isOpen) {
+          target.classList.add('open');
+        }
       }
+      function closeModal(id) {
+        document.getElementById(id).classList.remove('open');
+      }
+      
+      // Close on background click
+      document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) {
+            overlay.classList.remove('open');
+          }
+        });
+      });
+
+      // Stop propagation for clicks inside modal to prevent map interaction
+      document.querySelectorAll('.modal').forEach(modalElement => {
+        modalElement.addEventListener('click', (e) => {
+          e.stopPropagation();
+        });
+      });
     </script>
   </body>
 </html>

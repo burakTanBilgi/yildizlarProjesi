@@ -176,18 +176,23 @@ function drawBottomBarLayout() {
   textSize(36);
   text(posterTitle.toUpperCase(), centerX, centerY - 20);
   
-  // Description
+  // Description (Wrapped)
   fill(255, 180);
   textFont('Inter');
   textStyle(NORMAL);
   textSize(14);
-  text(posterDesc, centerX, centerY + 20);
+  let maxDescWidth = width * 0.6; // Limit width to 60%
   
+  // Calculate height to adjust next element
+  text(posterDesc, centerX - maxDescWidth/2, centerY + 10, maxDescWidth);
+  
+  let descHeight = (textWidth(posterDesc) > maxDescWidth) ? 40 : 20;
+
   // Story (Small, if any)
   if (posterStory) {
      fill(255, 140);
      textSize(12);
-     text(posterStory, centerX, centerY + 45);
+     text(posterStory, centerX - maxDescWidth/2, centerY + 10 + descHeight + 15, maxDescWidth);
   }
   
   // Metadata (Split corners)
@@ -195,9 +200,9 @@ function drawBottomBarLayout() {
     fill(255, 100);
     textFont('Courier New');
     textSize(12);
-    textAlign(RIGHT, BOTTOM);
+    textAlign(RIGHT, TOP);
     let meta = getMetadataString();
-    text(meta, width - 30, height - 20);
+    text(meta, width - 30, barY + 15);
   }
 }
 

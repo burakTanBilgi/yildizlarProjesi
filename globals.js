@@ -12,6 +12,7 @@ const PALETTE = {
 
 var stars = [];
 var constellations = [];
+var boundaries = []; // IAU Constellation Boundaries
 
 // Configuration
 var observerLat = 41.0082; // Istanbul Latitude
@@ -19,12 +20,18 @@ var observerLon = 28.9784; // Istanbul Longitude
 var date = new Date(); // Current date/time
 var showConstellationLines = false; // Default OFF per request
 var showConstellationLabels = false;
+var showConstellationBoundaries = false;
 var showStarNames = false;
+var showCelestialGrid = false;
+var activeGridType = 'horizontal'; // horizontal, equatorial, ecliptic, galactic
+var storyModeEnabled = true;
 var hoveredConstellationId = null; // Track hovered constellation
+var selectedConstellationId = null; // Track clicked/selected constellation
+var highlightSelectedConstellation = true; // Toggle for visual highlight
 
 // Poster / Overlay Configuration
 var posterTitle = "STAR MAP";
-var posterDesc = "Observed from Istanbul";
+var posterDesc = "b.t.b.";
 var posterStory = "";
 var currentLayout = "glass-overlay"; // glass-overlay, side-split, bottom-bar
 var showOverlayDate = false;

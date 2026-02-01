@@ -73,6 +73,12 @@ function parseConstellations(data) {
   }
 }
 
+function parseBounds(data) {
+  if (data.features) {
+    boundaries = data.features; // GeoJSON MultiLineString or Polygon features
+  }
+}
+
 function loadError(err) {
   console.error("Data Load Error:", err);
   stars = null; // Flag error
