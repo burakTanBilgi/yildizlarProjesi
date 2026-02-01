@@ -228,6 +228,40 @@ function setup() {
       saveCanvas('uygarligin_baslangici_' + date.toISOString().slice(0,10), 'png');
     });
   }
+
+  // 6. Color Settings Bindings
+  let cConst = select('#color-constellation');
+  if (cConst) {
+    cConst.value(customConstellationColor);
+    cConst.input(() => { customConstellationColor = cConst.value(); redraw(); });
+  }
+
+  let cGrid = select('#color-grid');
+  if (cGrid) {
+    cGrid.value(customGridColor);
+    cGrid.input(() => { customGridColor = cGrid.value(); redraw(); });
+  }
+
+  let sShift = select('#star-shift');
+  if (sShift) {
+    sShift.value(starColorShift);
+    sShift.input(() => { starColorShift = parseInt(sShift.value()); redraw(); });
+  }
+
+  let btnResetColors = select('#btn-reset-colors');
+  if (btnResetColors) {
+    btnResetColors.mousePressed(() => {
+       customConstellationColor = '#ffffff';
+       customGridColor = '#ffffff';
+       starColorShift = 0;
+
+       if(cConst) cConst.value('#ffffff');
+       if(cGrid) cGrid.value('#ffffff');
+       if(sShift) sShift.value(0);
+
+       redraw();
+    });
+  }
 }
 
 function draw() {
@@ -339,7 +373,9 @@ function draw() {
             lineStroke = color(PALETTE.lineHover);
             weight = 1.5;
          } else {
-            lineStroke = color(PALETTE.lineFaint);
+            let c = color(customConstellationColor);
+            c.setAlpha(30); // Faint opacity
+            lineStroke = c;
             weight = 1;
          }
          
@@ -420,7 +456,12 @@ function draw() {
       
       // Render Star
       let size = map(star.mag, 6, -1.5, 0.5, 4, true);
-      let starColor = bvToColor(star.bv);
+      
+      // Apply Spectrum Shift
+      // shift is -100 to 100. Map to roughly -0.8 to +0.8 B-V shift
+      let shiftedBV = star.bv + (starColorShift * 0.008);
+      
+      let starColor = bvToColor(shiftedBV);
       starColor.setAlpha(200);
       fill(starColor);
       circle(x, y, size);
@@ -482,7 +523,11 @@ function draw() {
   }
 }
 
-function mousePressed() {
+function mousePressed(e) {
+  // Prevent interaction if clicking on UI elements (modals, buttons, etc.)
+  // We only want to handle clicks that land directly on the P5 Canvas.
+  if (e && e.target && e.target.tagName !== 'CANVAS') return;
+
   // Only handle clicks within canvas bounds
   if (mouseX < 0 || mouseX > width || mouseY < 0 || mouseY > height) return;
 
@@ -641,17 +686,11 @@ function drawConstellationBoundaries() {
 
 function drawHealpixGrid() {
   // Draw simplified HEALPix Base Pixel boundaries (Nside=1)
-  // 12 Pixels defined by specific vertex points.
-  // Vertices in (RA, Dec) approx:
-  // North Polar: (45, 41.8), (135, 41.8), (225, 41.8), (315, 41.8)
-  // South Polar: (45, -41.8), ...
-  // Equator: (0,0), (90,0), (180,0), (270,0)
+  // ... (comments) ...
   
-  // We will just draw the "diamonds".
-  // Nside=1 boundaries are great circles or parallels? 
-  // Actually they are curves. For visual, we'll draw lines between the vertices.
-  
-  stroke(100, 255, 100, 60); // Green-ish
+  let c = color(customGridColor);
+  c.setAlpha(60);
+  stroke(c);
   
   // Approx vertices for Nside=1
   // z = 2/3 -> Dec = asin(2/3) ~= 41.81 deg
@@ -724,7 +763,9 @@ function drawCelestialLine(ra1, dec1, ra2, dec2, lst) {
 }
 
 function drawHorizontalGrid() {
-  stroke(255, 30); // Very faint white
+  let c = color(customGridColor);
+  c.setAlpha(30);
+  stroke(c);
 
   // 1. Altitude Rings (every 30 degrees)
   for (let alt = 30; alt < 90; alt += 30) {
@@ -761,11 +802,10 @@ function drawGenericGrid(type) {
   // LST is needed for Equatorial/Celestial conversion to Horizontal
   let lst = calculateLST(date, observerLon);
   
-  // Colors
-  if (type === 'equatorial') stroke(100, 200, 255, 40); // Cyan-ish
-  else if (type === 'ecliptic') stroke(255, 200, 100, 40); // Orange-ish
-  else if (type === 'galactic') stroke(255, 100, 200, 40); // Magenta-ish
-  else if (type === 'supergalactic') stroke(180, 100, 255, 40); // Violet-ish
+  // Colors - Use Custom Grid Color with opacity
+  let c = color(customGridColor);
+  c.setAlpha(40);
+  stroke(c);
   
   // 1. Latitude Lines (Parallels)
   // Draw circles at -60, -30, 0, 30, 60
@@ -843,16 +883,17 @@ function getProjectedPoint(type, lon, lat, lst) {
 }
 
 function drawGridLabel(str, x, y, isAzimuth = false) {
-    fill(255, 80);
+    let c = color(customGridColor);
+    c.setAlpha(80);
+    fill(c);
+    
     noStroke();
     textSize(10);
     textAlign(CENTER, CENTER);
     text(str, x, y);
     noFill();
+    
     // Reset stroke for next lines
-    stroke(255, 30);
-    if (activeGridType === 'equatorial') stroke(100, 200, 255, 40);
-    else if (activeGridType === 'ecliptic') stroke(255, 200, 100, 40);
-    else if (activeGridType === 'galactic') stroke(255, 100, 200, 40);
-    else if (activeGridType === 'supergalactic') stroke(180, 100, 255, 40);
+    c.setAlpha(40);
+    stroke(c);
 }

@@ -29,6 +29,11 @@ var hoveredConstellationId = null; // Track hovered constellation
 var selectedConstellationId = null; // Track clicked/selected constellation
 var highlightSelectedConstellation = true; // Toggle for visual highlight
 
+// Color Customization
+var customConstellationColor = '#ffffff'; // Default White
+var customGridColor = '#ffffff';          // Default White (opacity applied in draw)
+var starColorShift = 0;                   // -100 to 100 (Blue <-> Red shift)
+
 // Poster / Overlay Configuration
 var posterTitle = "STAR MAP";
 var posterDesc = "b.t.b.";

@@ -12,9 +12,9 @@
       :root {
         --glass-bg: rgba(10, 10, 12, 0.65);
         --glass-border: rgba(255, 255, 255, 0.08);
-        --accent: #64ffda;
+        --accent: #086375;
         --text-main: #e6e6e6;
-        --text-dim: #94a3b8;
+        --text-dim: #847979;
         --danger: #ff5f5f;
       }
       body {
@@ -166,7 +166,7 @@
       .modal-overlay.open {
         opacity: 1;
         visibility: visible;
-        /* Note: We keep pointer-events: none on overlay so map is clickable */
+        pointer-events: auto; /* Block clicks to map so we can close modal on bg click */
       }
 
       .modal {
@@ -339,6 +339,10 @@
         <div class="icon-btn" onclick="openModal('modal-grids')" data-tooltip="Grid Options">
           <i data-lucide="grid"></i>
         </div>
+
+        <div class="icon-btn" onclick="openModal('modal-colors')" data-tooltip="Color Settings">
+          <i data-lucide="palette"></i>
+        </div>
         
         <div style="height: 20px;"></div> <!-- Spacer -->
         
@@ -433,6 +437,43 @@
             </label>
         </div>
 
+      </div>
+    </div>
+
+    <!-- MODAL: COLORS -->
+    <div id="modal-colors" class="modal-overlay">
+      <div class="modal">
+        <h2>Color Settings</h2>
+        
+        <div class="form-group">
+          <label>Constellation Lines</label>
+          <div style="display:flex; gap:10px; align-items:center;">
+             <input type="color" id="color-constellation" value="#ffffff" style="height:40px; cursor:pointer;">
+             <span style="font-size:0.8em; color:var(--text-dim);">Base Color</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Grid Lines</label>
+          <div style="display:flex; gap:10px; align-items:center;">
+             <input type="color" id="color-grid" value="#ffffff" style="height:40px; cursor:pointer;">
+             <span style="font-size:0.8em; color:var(--text-dim);">Grid Overlay</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Star Spectrum Shift</label>
+          <input type="range" id="star-shift" min="-100" max="100" value="0" style="width:100%; cursor:ew-resize;">
+          <div style="display:flex; justify-content:space-between; color:var(--text-dim); font-size:0.7em;">
+            <span>Cooler (Blue)</span>
+            <span>Default</span>
+            <span>Warmer (Red)</span>
+          </div>
+        </div>
+
+        <button class="btn-primary" id="btn-reset-colors" style="background:transparent; border:1px solid var(--glass-border); color:var(--text-main); margin-top:20px;">
+          Reset Defaults
+        </button>
       </div>
     </div>
 
