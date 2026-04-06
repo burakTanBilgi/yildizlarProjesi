@@ -61,5 +61,4 @@ npx serve .
 * **Phase 3: Poster Studio & Layouts** (Completed) ✅
 * **Phase 99: Mythology & Storytelling Integration** (In Progress) ⏳
 
-## License
-MIT Author: [Your Name / Alias]
+
